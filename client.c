@@ -286,10 +286,9 @@ void rtt(struct conn udp)
     {
       if(cmsg->cmsg_level == SOL_SOCKET)
       {
-        printf("%d\n", cmsg->cmsg_type);
+        //printf("%d\n", cmsg->cmsg_type);
         if(cmsg->cmsg_type == SO_TIMESTAMP)
         {
-          printf("yo\n");
           memcpy(&tvrecv, CMSG_DATA(cmsg), sizeof(tvrecv));
         }
       }
@@ -311,6 +310,15 @@ void rtt(struct conn udp)
   }
   middle = sum / n;
   median = times[100];
+  min = times[0];
+  max = times[199];
+
+  printf("in this test %d bytes were sent, %d bytes were received\n", tx, rx);
+  printf("number of runs: %d\n", n);
+  printf("minimum:    %"PRIu64"\n", min);
+  printf("maximum:    %"PRIu64"\n", max);
+  printf("average:    %"PRIu64"\n", middle);
+  printf("median:     %"PRIu64"\n", median);
 }
 
 void ploss(struct conn udp, struct conn tcp)
