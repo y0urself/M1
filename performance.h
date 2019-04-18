@@ -7,6 +7,8 @@
 
 #define BUF_SIZE 1024
 #define UDP_OVERHEAD 8
+#define TEST_RUNS 10000 /* Number of runs for each test */
+#define RTT_RUNS 200
 
 struct conn
 {
@@ -32,5 +34,9 @@ int max(int x, int y)
     return y; 
   }
 } 
+
+int sending(struct conn udp, char** buffer);
+
+int receiving(struct conn udp, char** buffer);
 
 #endif /* PERFORMANCE_H */

@@ -7,6 +7,7 @@
 #include <sys/types.h> 
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <sys/time.h>
 
 #include <inttypes.h>
 
@@ -16,7 +17,8 @@
 
 void rtt(struct conn udp);
 void ploss(struct conn udp, struct conn tcp);
-void bwidth(struct conn udp, u_int64_t *time, int *bytes);
+void bwidth(struct conn udp, struct conn tcp);
+void bneck(struct conn udp);
 
 void usage()
 {
@@ -77,7 +79,6 @@ int main(int argc, char** argv)
   int tcp_len;
 
   struct cmsghdr cmsg;
-  //struct msghdr *msg;
 
   cmsg.cmsg_type = SO_TIMESTAMP;
 
@@ -114,15 +115,11 @@ int main(int argc, char** argv)
 
   /* UDP SOCKET PROPERTIES */
   int udp_socket_fd = 0;
-  int udp_len;
-
 
   fd_set rset;
 
   struct sockaddr_in udp_server_address;
   struct hostent *udp_server;
-
-  socklen_t udp_server_len;
 
   memset(&udp_server_address, 0x00, sizeof(udp_server_address));
   //memset(buffer, 0x00, sizeof(buffer));
@@ -160,35 +157,8 @@ int main(int argc, char** argv)
   memcpy((char *)&tcp.addr.sin_addr.s_addr, (char *)tcp_server->h_addr, tcp_server->h_length);
   tcp.addr.sin_port = htons(port);
 
-
-
-  // struct timeval	myto = { 5, 0 };
-	// int		tlen = sizeof( myto );
-	// if ( setsockopt( udp_socket_fd, SOL_SOCKET, SO_RCVTIMEO, &myto, tlen ) < 0 )
-	// 	{ perror( "setsockopt RCVTIMEO" ); exit(1);  }
-
   int timeopt = 1;
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
-
-	char	message[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890 =";
-	char	buf[]     = "----------------------------------------";
-	int	len = strlen(message);
-
-	struct iovec io_vec[1] = { { message, len } };
-
-  unsigned char	cbuf[ 40 ] = { 0 };
-	int		clen = sizeof( cbuf );
-
-  /* MSG HEADER */
-
-  struct msghdr	msg = { 0 };
-	msg.msg_name	= &udp_server_address;
-	msg.msg_namelen	= udp_server_len;
-	msg.msg_iov	= io_vec;
-	msg.msg_iovlen	= 1;
-	msg.msg_control	= NULL;
-	msg.msg_controllen	= 0;
-	msg.msg_flags	= 0;
 
   printf("Connecting via TCP\n");
 
@@ -197,15 +167,15 @@ int main(int argc, char** argv)
       printf("connection with the server failed...\n"); 
   } 
 
-  write(tcp.socket, buffer, sizeof(buffer));
+  send(tcp.socket, buffer, sizeof(buffer), 0);
 
-  read(tcp.socket, buffer, sizeof(buffer));
+  recv(tcp.socket, buffer, sizeof(buffer), 0);
 
   printf("%s\n", buffer);
 
   printf("TCP established\n");
 
-  u_int64_t time = 0;
+  uint64_t time = 0;
   int bytes = 0;
 
   if(mode == 1)
@@ -214,52 +184,57 @@ int main(int argc, char** argv)
   }
   else if(mode == 2)
   {
-
+    ploss(udp, tcp);
   }
   else if(mode == 3)
   {
-    bwidth(udp, &time, &bytes);
+    bwidth(udp, tcp);
   }
   
-  printf("TCP me again\n");
+  //printf("TCP me again\n");
 
-  write(tcp_socket_fd, buffer, sizeof(buffer));
+  send(tcp.socket, buffer, sizeof(buffer), 0);
 
-  read(tcp_socket_fd, buffer, sizeof(buffer));
+  recv(tcp.socket, buffer, sizeof(buffer), 0);
 
   if(mode == 3)
   {
-    int i = 0;
-    memcpy((char*)&i, buffer, sizeof(int));
-    printf("Packets received: %d, with size of %d byte in %"PRIu64" microsecs\n", i, bytes, time);
+    //int i = 0;
+    //memcpy((char*)&i, buffer, sizeof(int));
+    //printf("Packets received: %d, with size of %d byte in %"PRIu64" microsecs\n", i, bytes, time);
 
-    double throughput = (i * bytes) * ((double)1000000 / time);
-    printf("Throughput: %f bytes/s\n", throughput);
+    //double throughput = (i * bytes) * ((double)1000000 / time);
+    //printf("Throughput: %f bytes/s\n", throughput);
   }
 
+  //printf("closing sockets.\n");
 
-  printf("closing\n");
+  close(tcp.socket);
+  close(udp.socket);
 
-  close(tcp_socket_fd);
-
-  //printf("Echo from server: %s", buffer);
   return 0;
 }
 
 void rtt(struct conn udp)
 {
-  union
-  {
-    struct cmsghdr cm;
-    char control[CMSG_SPACE(sizeof(struct timeval))];
-  }
-  cmsg_union;
+  uint64_t times[RTT_RUNS];
+  uint64_t median, middle, min, max;
+  uint64_t sum = 0;
 
-  memset(&cmsg_union, 0, sizeof(cmsg_union));
+  // union
+  // {
+  //   struct cmsghdr cm;
+  //   char control[CMSG_SPACE(sizeof(struct timeval))];
+  // }
+  // cmsg_union;
 
-  char message[] = "....1....1....1";
-  char buf[]     = "--------------------------------------------";
+  // memset(&cmsg_union, 0, sizeof(cmsg_union));
+
+  char message[] = "Der Satz hatte zu viele Silben, entschuldige dich!";
+  char buf[] = "Ja ich weiß, es tut mir wirklich schrecklich leid!";
   int len = strlen(message);
+  int i = 0;
+  int n = RTT_RUNS;
 
   struct iovec io_vec[1] = {{message, len}};
 
@@ -279,62 +254,69 @@ void rtt(struct conn udp)
 
   int rx, tx;
 
-  struct timeval tvsend, tvrecv;
-  if (gettimeofday(&tvsend, NULL) < 0)
+  while(i < n)
   {
-    error("gettimeofday");
-    exit(1);
-  }
-
-  tx = sendmsg(udp.socket, &msg, 0);
-  if (tx < 0) 
-  {
-    error("ERROR in sendmsg");
-  }
-
-  io_vec[0].iov_base = buf;
-  msg.msg_control = cbuf;
-  msg.msg_controllen = clen;
-
-  rx = recvmsg(udp.socket, &msg, 0);
-  if (rx < 0)
-  {
-    error("ERROR in recvmsg");
-  }
-
-  tvrecv.tv_sec = 0;
-  tvrecv.tv_usec = 0;
-  struct cmsghdr *cmsg;
-  for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
-  {
-    if(cmsg->cmsg_level == SOL_SOCKET)
+    struct timeval tvsend, tvrecv;
+    if (gettimeofday(&tvsend, NULL) < 0)
     {
-      printf("%d\n", cmsg->cmsg_type);
+      error("gettimeofday");
+      exit(1);
+    }
+    tx = sendmsg(udp.socket, &msg, 0);
+    if (tx < 0) 
+    {
+      error("ERROR in sendmsg");
+    }
+
+    io_vec[0].iov_base = buf;
+    msg.msg_control = cbuf;
+    msg.msg_controllen = clen;
+
+    rx = recvmsg(udp.socket, &msg, 0);
+    if (rx < 0)
+    {
+      error("ERROR in recvmsg");
+    }
+
+    tvrecv.tv_sec = 0;
+    tvrecv.tv_usec = 0;
+    struct cmsghdr *cmsg;
+    for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
+    {
+      if(cmsg->cmsg_level == SOL_SOCKET)
+      {
+        printf("%d\n", cmsg->cmsg_type);
         if(cmsg->cmsg_type == SO_TIMESTAMP)
         {
           printf("yo\n");
           memcpy(&tvrecv, CMSG_DATA(cmsg), sizeof(tvrecv));
         }
+      }
     }
+    printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
+
+    uint64_t stamp0, stamp1;
+    stamp0 = tvsend.tv_sec * 1000000LL + tvsend.tv_usec;
+    stamp1 = tvrecv.tv_sec * 1000000LL + tvrecv.tv_usec;
+    uint64_t rttime = stamp1 - stamp0;
+    times[i] = rttime;
+    sum = sum + rttime;
+
+    printf("%d bytes sent, %d bytes received \n", tx, rx);
+    printf("round-trip time was %"PRIu64" microseconds \n\n", rttime);
+
+    i++;
+    printf("%d\n", i);
   }
-
-  printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
-
-  unsigned long long stamp0, stamp1;
-  stamp0 = tvsend.tv_sec * 1000000LL + tvsend.tv_usec;
-  stamp1 = tvrecv.tv_sec * 1000000LL + tvrecv.tv_usec;
-  unsigned long long rtt = stamp1 - stamp0;
-
-  printf("%d bytes sent, %d bytes received \n", tx, rx);
-  printf("round-trip time was %llu microseconds \n\n", rtt);
 }
 
-void ploss(struct conn udp, struct conn tcp,)
+void ploss(struct conn udp, struct conn tcp)
 {
 // TODO: Both connections? TX / RX?
   int rx, tx;
+  int n = TEST_RUNS;
 
-  int ready_fd;
+  int ready_fd, max_fd;
   fd_set rset;
   char buffer[BUF_SIZE];
   memset(buffer, 0x00, sizeof(buffer));
@@ -344,81 +326,120 @@ void ploss(struct conn udp, struct conn tcp,)
   t_val.tv_usec = 0;
 
 
-  if(strcmp(buffer, "ploss") == 0)
-  {
-    strcpy(buffer, "Der Satz hatte zu viele Silben, entschuldige dich!");
-    strcpy(buffer, "Ja ich weiß, es tut mir wirklich schrecklich leid!");
-    // LOOPOOOOP
-    int i = 0;
+  strcpy(buffer, "Der Satz hatte zu viele Silben, entschuldige dich!");
+  //strcpy(buffer, "Ja ich weiß, es tut mir wirklich schrecklich leid!");
+  // LOOPOOOOP
+  int i = 0;
 
-    FD_ZERO(&rset);
+  FD_ZERO(&rset);
 
-    while(i < 10000)
+  while(i < n)
+  { 
+    tx = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
+    if (tx < 0) 
     {
-      // FD_SET(udp.socket, &rset);
-
-      // ready_fd = select(udp.socket + 1, &rset, NULL, NULL, &t_val); 
-
-      tx = sendto(udp.socket, buffer, strlen(buffer), 0, &udp.addr, udp.size);
-      if (tx < 0) 
-      {
-        error("ERROR in sendto");
-      }  
-
-      // if(FD_ISSET(udp.socket, &rset))
-      // {
-      //   rx = recvfrom(udp.socket, buffer, strlen(buffer), 0, &udp.addr, &udp.size);
-      //   if (rx < 0) 
-      //   {
-      //     error("ERROR in recvfrom");
-      //   }
-      // }
-      i++;
-      printf("%d \n", i);
-    }
-
-    write(tcp_socket_fd, buffer, sizeof(buffer));
-
-    read(tcp_socket_fd, buffer, sizeof(buffer));
+      error("ERROR in sendto");
+    }  
+    i++;
+    //printf("%d \n", i);
+    usleep(10);
   }
+
+  char back[5] = "back";
+
+  send(tcp.socket, back, sizeof(back), 0);
+  recv(tcp.socket, back, sizeof(back), 0);
+
+  int k = 0;
+  memcpy((char*)&k, back, sizeof(int));
+  printf("Server received: %d/%d packets. Thats a loss of %f\n", k, n, (double)((n - k) / (double)n));
+
+  max_fd = max(tcp.socket, udp.socket) + 1;
+  i = 0;
+
+  FD_ZERO(&rset);
+  
+  while(42)
+  {
+    FD_SET(tcp.socket, &rset);
+    FD_SET(udp.socket, &rset);
+
+    ready_fd = select(max_fd, &rset, NULL, NULL, &t_val);
+
+    if(ready_fd < 0)
+    {
+      error("Error in select?");
+    }
+    else
+    {
+      if(FD_ISSET(tcp.socket, &rset))
+      {
+        recv(tcp.socket, back, sizeof(back), 0);
+        if(strcmp(back, "end.") == 0)
+        {
+          strcpy(back, "isok");
+          send(tcp.socket, back, sizeof(back), 0);
+          break;
+        }
+      }
+
+      if(FD_ISSET(udp.socket, &rset))
+      {
+        rx = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+        if (rx < 0)
+        {
+          error("ERROR in recvfrom");
+        }
+        i++;
+        //printf("%d \n", i++);
+      }
+    }
+  }
+
+  printf("Client received: %d/%d packets. Thats a loss of %f\n", i, n, (double)((n - i) / (double)n));
 }
 
-void bwidth(struct conn udp, u_int64_t* time, int* bytes)
+void bwidth(struct conn udp, struct conn tcp)
 {
-  struct timeval before; /* timeval for select() */
+  int bytes;
+  uint64_t time;
+  struct timeval before;
   before.tv_sec = 0;
   before.tv_usec = 0;
 
-  struct timeval after; /* timeval for select() */
+  struct timeval after;
   after.tv_sec = 0;
   after.tv_usec = 0;
 
+  int back[9];
+  memset(back, 0, sizeof(back));
+
+  int n = TEST_RUNS;
   int max_fd;
   int ready_fd;
   fd_set rset;
-  fd_set wset;
 
   int rx = 0;
 
   char buffer[BUF_SIZE];
 
-  strcpy(buffer, "Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum.\n");
+  strcpy(buffer, "111111111Lo111111111Loremrem111111111Lorem111111111Lorem111111111Lorem111111111Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum.\n");
 
-  *bytes = strlen(buffer) + 1 + UDP_OVERHEAD;
+  bytes = strlen(buffer) + 1 + UDP_OVERHEAD;
 
   // LOOPOOOOP
   int i = 0;
   int k = 0;
 
   gettimeofday(&before, NULL);
-  while(i < 100)
+  while(i < n)
   { 
     // FD_ZERO(&rset);
     // FD_SET(udp.socket, &rset);
 
     // if(FD_ISSET(udp.socket, &rset))
     // {
-      rx = sendto(udp.socket, buffer, strlen(buffer), 0, &udp.addr, udp.size);
+      rx = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
       //udp_len = send(udp.socket, buffer, strlen(buffer), 0);
       if (rx < 0) 
       {
@@ -432,12 +453,90 @@ void bwidth(struct conn udp, u_int64_t* time, int* bytes)
   }
   gettimeofday(&after, NULL);
 
-  printf("%d, %d, ..., %d, %d\n", before.tv_sec, before.tv_usec, after.tv_sec, after.tv_usec);
+  //printf("%d, %d, ..., %d, %d\n", before.tv_sec, before.tv_usec, after.tv_sec, after.tv_usec);
 
-  u_int64_t m = 1000000;
-  u_int64_t  stamp0, stamp1;
+  uint64_t m = 1000000;
+  uint64_t  stamp0, stamp1;
   stamp0 = before.tv_sec * m + before.tv_usec;
   stamp1 = after.tv_sec * m + after.tv_usec;
-  *time = stamp1 - stamp0;
-  printf("%"PRIu64"\n", *time);
+  time = stamp1 - stamp0;
+  //printf("%"PRIu64"\n", time);
+
+  send(tcp.socket, back, sizeof(buffer), 0);
+
+  recv(tcp.socket, back, sizeof(buffer), 0);
+
+  memcpy((char*)&i, back, sizeof(int));
+  printf("Server received: %d, with size of %d byte in %"PRIu64" microsecs\n", i, bytes, time);
+
+  double throughput = (i * bytes) * ((double)1000000 / time);
+  printf("Throughput Upload: %f bytes/s\n", throughput);
+
+  struct timeval t_val;
+  t_val.tv_sec = 0;
+  t_val.tv_usec = 0;
+
+  i = 0;
+
+  max_fd = max(udp.socket, tcp.socket) + 1;
+
+  while(42)
+  {
+    FD_SET(tcp.socket, &rset);
+    FD_SET(udp.socket, &rset);
+
+    ready_fd = select(max_fd, &rset, NULL, NULL, &t_val); 
+
+    //printf("%d\n", i);
+
+    if(ready_fd < 0)
+    {
+      error("Error in select?");
+    }
+    // else if(ready_fd == 0)
+    // {
+    //   printf("wtf\n");
+    // }
+    else
+    {
+      if(FD_ISSET(tcp.socket, &rset))
+      {
+        //printf("hello %d\n", i);
+
+        recv(tcp.socket, back, sizeof(back), 0);
+
+        memcpy((char*)&time, back, sizeof(uint64_t));
+
+        //printf("TCP closing\n");
+
+        send(tcp.socket, back, sizeof(back), 0);
+        break;
+      }
+    
+      if(FD_ISSET(udp.socket, &rset))
+      {
+        rx = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+        if (rx < 0)
+        {
+          error("ERROR in recvfrom");
+        }
+        //FD_CLR(udp.socket, &rset);
+        i++;
+        //printf("%s, %d\n", buffer, i);
+      }
+      // FD_ZERO(&rset);
+      // usleep(10); 
+    }
+  }
+
+  printf("Client received: %d, with size of %d byte in %"PRIu64" microsecs\n", i, bytes, time);
+
+  throughput = (i * bytes) * ((double)1000000 / time);
+  printf("Throughput Download: %f bytes/s\n", throughput);
+  
+}
+
+void bneck(struct conn udp)
+{
+
 }
