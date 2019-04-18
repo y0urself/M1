@@ -429,10 +429,14 @@ void bneck(struct conn udp)
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
 
   char buffer[BUF_SIZE];
+  char buffer2[BUF_SIZE];
   int len = strlen(buffer);
 
+  memset(buffer, 0, sizeof(buffer));
+  memset(buffer2, 0, sizeof(buffer2));
+
   struct iovec io_vec1[1] = {{buffer, len}};
-  struct iovec io_vec2[1] = {{buffer, len}};
+  struct iovec io_vec2[1] = {{buffer2, len}};
 
   unsigned char cbuf[45] = {0};
   int clen = sizeof(cbuf);
