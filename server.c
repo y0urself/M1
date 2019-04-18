@@ -423,7 +423,7 @@ void bneck(struct conn udp)
 {
   uint64_t m = 1000000;
   struct timeval t1, t2;
-  int rx1, rx2;
+  int rx1 = 0, rx2 = 0;
   int i = 0;
   int timeopt = 1;
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
@@ -473,6 +473,7 @@ void bneck(struct conn udp)
     {
       if(cmsg->cmsg_type == SO_TIMESTAMP)
       {
+        printf("yo");
         memcpy(&t1, CMSG_DATA(cmsg), sizeof(t1));
       }
     }
@@ -484,6 +485,7 @@ void bneck(struct conn udp)
     {
       if(cmsg2->cmsg_type == SO_TIMESTAMP)
       {
+        printf("yo");
         memcpy(&t2, CMSG_DATA(cmsg2), sizeof(t2));
       }
     }
