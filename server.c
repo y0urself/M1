@@ -423,7 +423,7 @@ void bneck(struct conn udp)
 {
   uint64_t m = 1000000;
   struct timeval t1, t2;
-  int rx;
+  int rx1, rx2;
   int i = 0;
   int timeopt = 1;
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
@@ -431,7 +431,8 @@ void bneck(struct conn udp)
   char buffer[BUF_SIZE];
   int len = strlen(buffer);
 
-  struct iovec io_vec[1] = {{buffer, len}};
+  struct iovec io_vec1[1] = {{buffer, len}};
+  struct iovec io_vec2[1] = {{buffer, len}};
 
   unsigned char cbuf[45] = {0};
   int clen = sizeof(cbuf);
@@ -440,7 +441,7 @@ void bneck(struct conn udp)
   memset(&msg, 0, sizeof(msg));
   msg.msg_name = &udp.addr;
   msg.msg_namelen = udp.size;
-  msg.msg_iov = io_vec;
+  msg.msg_iov = io_vec1;
   msg.msg_iovlen = 1;
   msg.msg_control = NULL;
   msg.msg_controllen = 0;
@@ -450,14 +451,16 @@ void bneck(struct conn udp)
   memset(&msg, 0, sizeof(msg));
   msg2.msg_name = &udp.addr;
   msg2.msg_namelen = udp.size;
-  msg2.msg_iov = io_vec;
+  msg2.msg_iov = io_vec2;
   msg2.msg_iovlen = 1;
   msg2.msg_control = NULL;
   msg2.msg_controllen = 0;
   msg2.msg_flags = 0;
 
-  rx = recvmsg(udp.socket, &msg, 0);
-  rx = recvmsg(udp.socket, &msg2, 0);
+  rx1 = recvmsg(udp.socket, &msg, 0);
+  printf("%d\n", rx1);
+  rx2 = recvmsg(udp.socket, &msg2, 0);
+  printf("%d\n", rx2);
 
   struct cmsghdr *cmsg;
   for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
@@ -487,6 +490,6 @@ void bneck(struct conn udp)
   stamp1 = t2.tv_sec * m + t2.tv_usec;
   uint64_t diff = stamp1 - stamp0;
 
-  printf("%d bytes sent, %d bytes received\n", rx);
+  printf("%d bytes sent, %d bytes send second packet\n", rx1, rx2);
   printf("difference between the packets was %"PRIu64" microseconds\n", diff);
 }
