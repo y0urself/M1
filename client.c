@@ -235,27 +235,28 @@ void rtt(struct conn udp)
   int len = strlen(message);
   int i = 0;
   int n = RTT_RUNS;
-
-  struct iovec io_vec[1] = {{message, len}};
-
-  unsigned char cbuf[45] = {0};
-  int clen = sizeof(cbuf);
-
-  /* MSG HEADER */
-  struct msghdr msg = {};
-  memset(&msg, 0, sizeof(msg));
-  msg.msg_name = &udp.addr;
-  msg.msg_namelen = udp.size;
-  msg.msg_iov = io_vec;
-  msg.msg_iovlen = 1;
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
+  uint64_t m = 1000000;
 
   int rx, tx;
 
   while(i < n)
   {
+    struct iovec io_vec[1] = {{message, len}};
+
+    unsigned char cbuf[45] = {0};
+    int clen = sizeof(cbuf);
+
+    /* MSG HEADER */
+    struct msghdr msg = {};
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_name = &udp.addr;
+    msg.msg_namelen = udp.size;
+    msg.msg_iov = io_vec;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
+
     struct timeval tvsend, tvrecv;
     if (gettimeofday(&tvsend, NULL) < 0)
     {
@@ -293,21 +294,23 @@ void rtt(struct conn udp)
         }
       }
     }
-    printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
+    //printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
 
     uint64_t stamp0, stamp1;
-    stamp0 = tvsend.tv_sec * 1000000LL + tvsend.tv_usec;
-    stamp1 = tvrecv.tv_sec * 1000000LL + tvrecv.tv_usec;
+    stamp0 = tvsend.tv_sec * m + tvsend.tv_usec;
+    stamp1 = tvrecv.tv_sec * m + tvrecv.tv_usec;
     uint64_t rttime = stamp1 - stamp0;
     times[i] = rttime;
     sum = sum + rttime;
 
-    printf("%d bytes sent, %d bytes received \n", tx, rx);
-    printf("round-trip time was %"PRIu64" microseconds \n\n", rttime);
+    printf("%d bytes sent, %d bytes received\n", tx, rx);
+    printf("round-trip time was %"PRIu64" microseconds\n", rttime);
 
     i++;
     printf("%d\n", i);
   }
+  middle = sum / n;
+  median = times[100];
 }
 
 void ploss(struct conn udp, struct conn tcp)
