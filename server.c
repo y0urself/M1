@@ -102,17 +102,13 @@ int main(int argc, char** argv)
   {
     error("ERROR on binding");
   }
-  if(bind(udp.socket, (struct sockaddr*)&udp.addr, udp.size) < 0)
-  {
-    error("ERROR on binding");
-  }
 
   if(listen(tcp.socket, 1) < 0)
   {
     error("ERROR on listen");
   }
 
-  tcp_client_fd = accept(tcp.socket, (struct sockaddr_in*)&tcp.addr, &tcp.size);
+  tcp_client_fd = accept(tcp.socket, (struct sockaddr*)&tcp.addr, &tcp.size);
 
   recv(tcp_client_fd, buffer, sizeof(buffer), 0);
   printf("%s\n", buffer);
@@ -131,6 +127,13 @@ int main(int argc, char** argv)
   else if(strcmp(buffer, "bneck") == 0)
   {
     mode = 4;
+    int timeopt = 1;
+    setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
+  }
+  
+  if(bind(udp.socket, (struct sockaddr*)&udp.addr, udp.size) < 0)
+  {
+    error("ERROR on binding");
   }
 
   printf("TCP established\n");
@@ -160,7 +163,7 @@ int main(int argc, char** argv)
 void rtt(struct conn udp, int client)
 {
   int i = 0;
-  char* buffer[BUF_SIZE];
+  char buffer[BUF_SIZE];
   struct timeval t_val;
   t_val.tv_sec = 0;
   t_val.tv_usec = 0;
@@ -222,8 +225,8 @@ void rtt(struct conn udp, int client)
 
 void ploss(struct conn udp, struct conn tcp, int client)
 {
-  char* buffer[BUF_SIZE];
-  char* back[5];
+  char buffer[BUF_SIZE];
+  char back[5];
   int max_fd, ready_fd;
   int i = 0;
   int n = TEST_RUNS;
@@ -425,8 +428,6 @@ void bneck(struct conn udp)
   struct timeval t1, t2;
   int rx1 = 0, rx2 = 0;
   int i = 0;
-  int timeopt = 1;
-  setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
 
   char buffer[BUF_SIZE];
   char buffer2[BUF_SIZE];
