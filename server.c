@@ -462,9 +462,11 @@ void bneck(struct conn udp)
   msg2.msg_controllen = clen;
   msg2.msg_flags = 0;
 
-  rx1 = recvmsg(udp.socket, &msg, 0);
+  rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+  //rx1 = recvmsg(udp.socket, &msg, 0);
   printf("%d\n", rx1);
-  rx2 = recvmsg(udp.socket, &msg2, 0);
+  rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+  //rx2 = recvmsg(udp.socket, &msg2, 0);
   printf("%d\n", rx2);
 
   struct cmsghdr *cmsg;
