@@ -10,7 +10,7 @@
 #include <sys/time.h>
 
 #include <inttypes.h>
-
+#include <unistd.h>
 #include <time.h>
 
 #include "performance.h"
