@@ -439,9 +439,12 @@ void bneck(struct conn udp)
   struct iovec io_vec1[1] = {{buffer, len}};
   struct iovec io_vec2[1] = {{buffer2, len}};
 
-  unsigned char cbuf[BUF_SIZE];
-  memset(cbuf, 0, sizeof(cbuf));
-  int clen = sizeof(cbuf);
+  unsigned char cbuffer[BUF_SIZE];
+  memset(cbuffer, 0, sizeof(cbuffer));
+  int clen = sizeof(cbuffer);
+  unsigned char cbuffer2[BUF_SIZE];
+  memset(cbuffer2, 0, sizeof(cbuffer2));
+  int clen2 = sizeof(cbuffer2);
 
   struct msghdr msg = {};
   memset(&msg, 0, sizeof(msg));
@@ -449,7 +452,7 @@ void bneck(struct conn udp)
   msg.msg_namelen = udp.size;
   msg.msg_iov = io_vec1;
   msg.msg_iovlen = 1;
-  msg.msg_control = cbuf;
+  msg.msg_control = cbuffer;
   msg.msg_controllen = clen;
   msg.msg_flags = 0;
 
@@ -459,8 +462,8 @@ void bneck(struct conn udp)
   msg2.msg_namelen = udp.size;
   msg2.msg_iov = io_vec2;
   msg2.msg_iovlen = 1;
-  msg2.msg_control = cbuf;
-  msg2.msg_controllen = clen;
+  msg2.msg_control = cbuffer2;
+  msg2.msg_controllen = clen2;
   msg2.msg_flags = 0;
 
   //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
