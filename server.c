@@ -453,7 +453,7 @@ void bneck(struct conn udp)
   msg.msg_flags = 0;
 
   struct msghdr msg2 = {};
-  memset(&msg, 0, sizeof(msg));
+  memset(&msg2, 0, sizeof(msg2));
   msg2.msg_name = &udp.addr;
   msg2.msg_namelen = udp.size;
   msg2.msg_iov = io_vec2;
@@ -462,11 +462,11 @@ void bneck(struct conn udp)
   msg2.msg_controllen = clen;
   msg2.msg_flags = 0;
 
-  rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
-  //rx1 = recvmsg(udp.socket, &msg, 0);
+  //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+  rx1 = recvmsg(udp.socket, &msg, 0);
   printf("%d\n", rx1);
-  rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
-  //rx2 = recvmsg(udp.socket, &msg2, 0);
+  //rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+  rx2 = recvmsg(udp.socket, &msg2, 0);
   printf("%d\n", rx2);
 
   struct cmsghdr *cmsg;
@@ -476,7 +476,7 @@ void bneck(struct conn udp)
     {
       if(cmsg->cmsg_type == SO_TIMESTAMP)
       {
-        printf("yo");
+        printf("yo1");
         memcpy(&t1, CMSG_DATA(cmsg), sizeof(t1));
       }
     }
@@ -488,7 +488,7 @@ void bneck(struct conn udp)
     {
       if(cmsg2->cmsg_type == SO_TIMESTAMP)
       {
-        printf("yo");
+        printf("yo2");
         memcpy(&t2, CMSG_DATA(cmsg2), sizeof(t2));
       }
     }
