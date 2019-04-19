@@ -439,7 +439,7 @@ void bneck(struct conn udp)
   struct iovec io_vec1[1] = {{buffer, len}};
   struct iovec io_vec2[1] = {{buffer2, len}};
 
-  unsigned char cbuf[45] = {0};
+  unsigned char cbuf[BUF_SIZE] = {0};
   int clen = sizeof(cbuf);
 
   struct msghdr msg = {};
@@ -448,8 +448,8 @@ void bneck(struct conn udp)
   msg.msg_namelen = udp.size;
   msg.msg_iov = io_vec1;
   msg.msg_iovlen = 1;
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
+  msg.msg_control = cbuf;
+  msg.msg_controllen = clen;
   msg.msg_flags = 0;
 
   struct msghdr msg2 = {};
@@ -458,8 +458,8 @@ void bneck(struct conn udp)
   msg2.msg_namelen = udp.size;
   msg2.msg_iov = io_vec2;
   msg2.msg_iovlen = 1;
-  msg2.msg_control = NULL;
-  msg2.msg_controllen = 0;
+  msg2.msg_control = cbuf;
+  msg2.msg_controllen = clen;
   msg2.msg_flags = 0;
 
   rx1 = recvmsg(udp.socket, &msg, 0);
@@ -500,3 +500,4 @@ void bneck(struct conn udp)
   printf("%d bytes sent, %d bytes send second packet\n", rx1, rx2);
   printf("difference between the packets was %"PRIu64" microseconds\n", diff);
 }
+
