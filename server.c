@@ -439,7 +439,8 @@ void bneck(struct conn udp)
   struct iovec io_vec1[1] = {{buffer, len}};
   struct iovec io_vec2[1] = {{buffer2, len}};
 
-  unsigned char cbuf[BUF_SIZE] = {0};
+  unsigned char cbuf[BUF_SIZE];
+  memset(cbuf, 0, sizeof(cbuf));
   int clen = sizeof(cbuf);
 
   struct msghdr msg = {};
