@@ -293,7 +293,7 @@ void ploss(struct conn udp, struct conn tcp, int client)
 
   while(i < n)
   {
-    tx = sendto(udp.socket, buffer, strlen(buffer), 0, &udp.addr, udp.size);
+    tx = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
     if (tx < 0) 
     {
       error("ERROR in sendto");
@@ -396,7 +396,7 @@ void bwidth(struct conn udp, struct conn tcp, int client)
 
     // if(FD_ISSET(udp.socket, &rset))
     // {
-      rx = sendto(udp.socket, buffer, strlen(buffer), 0, &udp.addr, udp.size);
+      rx = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
       //udp_len = send(udp.socket, buffer, strlen(buffer), 0);
       if (rx < 0) 
       {
