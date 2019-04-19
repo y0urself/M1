@@ -480,7 +480,7 @@ void bneck(struct conn udp)
     }
   }
   struct cmsghdr *cmsg2;
-  for(cmsg2 = CMSG_FIRSTHDR(&msg2); cmsg2 != NULL; cmsg = CMSG_NXTHDR(&msg2, cmsg2))
+  for(cmsg2 = CMSG_FIRSTHDR(&msg2); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&msg2, cmsg2))
   {
     if(cmsg2->cmsg_level == SOL_SOCKET)
     {
