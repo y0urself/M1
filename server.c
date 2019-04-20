@@ -328,7 +328,7 @@ void bwidth(struct conn udp, struct conn tcp, int client)
   t_val.tv_usec = 0;
 
   int max_fd = max(client, udp.socket) + 1;
-  //FD_ZERO(&rset);
+  FD_ZERO(&rset);
   while(42)
   {
     FD_SET(client, &rset);
@@ -458,6 +458,7 @@ void bneck(struct conn udp, int client)
   t_val.tv_sec = 0;
   t_val.tv_usec = 0;
 
+  FD_ZERO(&rset);
   while(42)
   {
     struct msghdr msg = {};
