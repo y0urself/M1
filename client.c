@@ -583,11 +583,16 @@ void bneck(struct conn udp, struct conn tcp)
 
 
   send(tcp.socket, back, sizeof(back), 0);
-  printf("send end\n");
+  printf("send end, %d\n", i);
 
+  middle = sum / n;
+  median = times[100];
+  min = times[0];
+  max = times[199];
   
-
-
-
-
+  printf("number of runs: %d\n", n);
+  printf("minimum:    %"PRIu64"\n", min);
+  printf("maximum:    %"PRIu64"\n", max);
+  printf("average:    %"PRIu64"\n", middle);
+  printf("median:     %"PRIu64"\n", median);
 }

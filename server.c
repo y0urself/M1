@@ -529,7 +529,8 @@ void bneck(struct conn udp, int client)
 
     if(FD_ISSET(client, &rset))
     {
-      recv(client, buffer, sizeof(buffer), 0);
+      printf("dropped\n");
+      recv(client, back, sizeof(back), 0);
       break;
     }
   }
