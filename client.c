@@ -180,18 +180,22 @@ int main(int argc, char** argv)
 
   if(mode == 1)
   {
+    printf("Calculating Round-Trip-Time:\n");
     rtt(udp);
   }
   else if(mode == 2)
   {
+    printf("Calculating Packet-Loss:\n");
     ploss(udp, tcp);
   }
   else if(mode == 3)
   {
+    printf("Calculating Bandwidth:\n");
     bwidth(udp, tcp);
   }
   else if(mode == 4)
   {
+    printf("Calculating Bottleneck:\n");
     bneck(udp, tcp);
   }
   
@@ -569,11 +573,12 @@ void bneck(struct conn udp, struct conn tcp)
 
   while(i < n)
   {
-    usleep(100);
+    printf("sleep\n");
+    sleep(1);
     tx1 = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
     tx2 = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
 
-    //printf("sizes send: %d, %d\n", tx1, tx2);
+    printf("sizes send: %d, %d\n", tx1, tx2);
 
     recv(tcp.socket, back, sizeof(back), 0);
     memcpy((char*)&tmp, back, sizeof(uint64_t));
@@ -600,5 +605,14 @@ void bneck(struct conn udp, struct conn tcp)
   printf("average:    %"PRIu64" µs - %f byte/s\n", middle, (double)((tx1 / (double)middle) * m));
   printf("median:     %"PRIu64" µs - %f byte/s\n", median, (double)((tx1 / (double)median) * m));
 
-
+  printf("List: [");
+  for(int j = 0; j < n; j++)
+  {
+    printf("%"PRIu64" µs", times[j]);
+    if(j != (n - 1))
+    {
+      printf(", ");
+    }
+  }
+  printf("]\n");
 }
