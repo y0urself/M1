@@ -570,7 +570,7 @@ void bneck(struct conn udp, struct conn tcp)
     tx1 = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
     tx2 = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
 
-    printf("sizes send: %d, %d\n", tx1, tx2);
+    //printf("sizes send: %d, %d\n", tx1, tx2);
 
     recv(tcp.socket, back, sizeof(back), 0);
     memcpy((char*)&tmp, back, sizeof(uint64_t));
@@ -578,9 +578,8 @@ void bneck(struct conn udp, struct conn tcp)
     times[i] = tmp;
     sum = sum + tmp;
     i++;
-    printf("%d\n", i);
+    //printf("%d\n", i);
   }
-
 
   send(tcp.socket, back, sizeof(back), 0);
   printf("send end, %d\n", i);
