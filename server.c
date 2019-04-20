@@ -428,6 +428,7 @@ void bneck(struct conn udp, int client)
   struct timeval t1, t2;
   int rx1 = 0, rx2 = 0;
   int i = 0;
+  int max_fd;
 
   char back[10];
   char buffer[BUF_SIZE];
@@ -457,10 +458,16 @@ void bneck(struct conn udp, int client)
   struct timeval t_val;
   t_val.tv_sec = 0;
   t_val.tv_usec = 0;
+  
+  max_fd = max(client, udp.socket) + 1;
 
   FD_ZERO(&rset);
   while(42)
   {
+    FD_SET(client, &rset);
+    FD_SET(udp.socket, &rset);
+    ready_fd = select(max_fd, &rset, NULL, NULL, &t_val);
+
     struct msghdr msg = {};
     memset(&msg, 0, sizeof(msg));
     msg.msg_name = &udp.addr;
@@ -481,52 +488,53 @@ void bneck(struct conn udp, int client)
     msg2.msg_controllen = BUF_SIZE;
     msg2.msg_flags = 0;
 
-    //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
-    rx1 = recvmsg(udp.socket, &msg, 0);
-    //printf("%d\n", rx1);
-    //rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
-    rx2 = recvmsg(udp.socket, &msg2, 0);
-    //printf("%d\n", rx2);
 
-    struct cmsghdr *cmsg;
-    for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
+    if(FD_ISSET(udp.socket, &rset))
     {
-      if(cmsg->cmsg_level == SOL_SOCKET)
+      //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+      rx1 = recvmsg(udp.socket, &msg, 0);
+      //printf("%d\n", rx1);
+      //rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
+      rx2 = recvmsg(udp.socket, &msg2, 0);
+      //printf("%d\n", rx2);
+
+      struct cmsghdr *cmsg;
+      for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
       {
-        if(cmsg->cmsg_type == SO_TIMESTAMP)
+        if(cmsg->cmsg_level == SOL_SOCKET)
         {
-          //printf("yo1");
-          memcpy(&t1, CMSG_DATA(cmsg), sizeof(t1));
+          if(cmsg->cmsg_type == SO_TIMESTAMP)
+          {
+            //printf("yo1");
+            memcpy(&t1, CMSG_DATA(cmsg), sizeof(t1));
+          }
         }
       }
-    }
-    struct cmsghdr *cmsg2;
-    for(cmsg2 = CMSG_FIRSTHDR(&msg2); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&msg2, cmsg2))
-    {
-      if(cmsg2->cmsg_level == SOL_SOCKET)
+      struct cmsghdr *cmsg2;
+      for(cmsg2 = CMSG_FIRSTHDR(&msg2); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&msg2, cmsg2))
       {
-        if(cmsg2->cmsg_type == SO_TIMESTAMP)
+        if(cmsg2->cmsg_level == SOL_SOCKET)
         {
-          //printf("yo2");
-          memcpy(&t2, CMSG_DATA(cmsg2), sizeof(t2));
+          if(cmsg2->cmsg_type == SO_TIMESTAMP)
+          {
+            //printf("yo2");
+            memcpy(&t2, CMSG_DATA(cmsg2), sizeof(t2));
+          }
         }
       }
+      uint64_t stamp0, stamp1;
+      stamp0 = t1.tv_sec * m + t1.tv_usec;
+      stamp1 = t2.tv_sec * m + t2.tv_usec;
+      uint64_t diff = stamp1 - stamp0;
+
+      memset(back, 0, sizeof(back));
+      memcpy(back, (char*)&diff, sizeof(uint64_t));
+
+      //printf("bluuuu\n");
+      send(client, back, sizeof(back), 0);
+      printf("bluuuub %d\n", i++);
     }
-    uint64_t stamp0, stamp1;
-    stamp0 = t1.tv_sec * m + t1.tv_usec;
-    stamp1 = t2.tv_sec * m + t2.tv_usec;
-    uint64_t diff = stamp1 - stamp0;
-
-    memset(back, 0, sizeof(back));
-    memcpy(back, (char*)&diff, sizeof(uint64_t));
-
-    //printf("bluuuu\n");
-    send(client, back, sizeof(back), 0);
-    printf("bluuuub %d\n", i++);
-
-    FD_SET(client, &rset);
-
-    ready_fd = select(client + 1, &rset, NULL, NULL, &t_val);
+    
 
     if(FD_ISSET(client, &rset))
     {
