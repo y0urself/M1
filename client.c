@@ -556,6 +556,7 @@ void bneck(struct conn udp, struct conn tcp)
   uint64_t times[RTT_RUNS];
   uint64_t tmp, sum = 0;
   uint64_t min, max, middle, median;
+  uint64_t m = 1000000;
   int i = 0;
   int n = RTT_RUNS;
   int tx1, tx2;
@@ -589,8 +590,10 @@ void bneck(struct conn udp, struct conn tcp)
   max = times[199];
   
   printf("number of runs: %d\n", n);
-  printf("minimum:    %"PRIu64"\n", min);
-  printf("maximum:    %"PRIu64"\n", max);
-  printf("average:    %"PRIu64"\n", middle);
-  printf("median:     %"PRIu64"\n", median);
+  printf("minimum:    %"PRIu64" µs - %f byte/s\n", min, ((tx1 / min) * m));
+  printf("maximum:    %"PRIu64" µs - %f byte/s\n", max, ((tx1 / min) * m));
+  printf("average:    %"PRIu64" µs - %f byte/s\n", middle, ((tx1 / min) * m));
+  printf("median:     %"PRIu64" µs - %f byte/s\n", median, ((tx1 / min) * m));
+
+
 }
