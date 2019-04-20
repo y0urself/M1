@@ -590,10 +590,10 @@ void bneck(struct conn udp, struct conn tcp)
   max = times[199];
   
   printf("number of runs: %d\n", n);
-  printf("minimum:    %"PRIu64" µs - %f byte/s\n", min, ((tx1 / min) * m));
-  printf("maximum:    %"PRIu64" µs - %f byte/s\n", max, ((tx1 / min) * m));
-  printf("average:    %"PRIu64" µs - %f byte/s\n", middle, ((tx1 / min) * m));
-  printf("median:     %"PRIu64" µs - %f byte/s\n", median, ((tx1 / min) * m));
+  printf("minimum:    %"PRIu64" µs - %f byte/s\n", min, (double)((tx1 / (double)min) * m));
+  printf("maximum:    %"PRIu64" µs - %f byte/s\n", max, (double)((tx1 / (double)min) * m));
+  printf("average:    %"PRIu64" µs - %f byte/s\n", middle, (double)((tx1 / (double)min) * m));
+  printf("median:     %"PRIu64" µs - %f byte/s\n", median, (double)((tx1 / (double)min) * m));
 
 
 }
