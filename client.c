@@ -578,9 +578,8 @@ void bneck(struct conn udp, struct conn tcp)
     times[i] = tmp;
     sum = sum + tmp;
     i++;
-    printf("%d\n", i);
   }
-
+  printf("%d\n", i);
 
   send(tcp.socket, back, sizeof(back), 0);
   printf("send end, %d\n", i);

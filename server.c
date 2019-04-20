@@ -482,10 +482,10 @@ void bneck(struct conn udp, int client)
 
     //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
     rx1 = recvmsg(udp.socket, &msg, 0);
-    printf("%d\n", rx1);
+    //printf("%d\n", rx1);
     //rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
     rx2 = recvmsg(udp.socket, &msg2, 0);
-    printf("%d\n", rx2);
+    //printf("%d\n", rx2);
 
     struct cmsghdr *cmsg;
     for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
@@ -494,7 +494,7 @@ void bneck(struct conn udp, int client)
       {
         if(cmsg->cmsg_type == SO_TIMESTAMP)
         {
-          printf("yo1");
+          //printf("yo1");
           memcpy(&t1, CMSG_DATA(cmsg), sizeof(t1));
         }
       }
@@ -506,7 +506,7 @@ void bneck(struct conn udp, int client)
       {
         if(cmsg2->cmsg_type == SO_TIMESTAMP)
         {
-          printf("yo2");
+          //printf("yo2");
           memcpy(&t2, CMSG_DATA(cmsg2), sizeof(t2));
         }
       }
@@ -519,9 +519,9 @@ void bneck(struct conn udp, int client)
     memset(back, 0, sizeof(back));
     memcpy(back, (char*)&diff, sizeof(uint64_t));
 
-    printf("bluuuu\n");
+    //printf("bluuuu\n");
     send(client, back, sizeof(back), 0);
-    printf("bluuuub\n");
+    printf("bluuuub %d\n", i++);
 
     FD_SET(client, &rset);
 
