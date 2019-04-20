@@ -312,8 +312,11 @@ void rtt(struct conn udp)
     i++;
     printf("%d\n", i);
   }
+  
+  qsort(times, n, sizeof(uint64_t), comp);
+
   middle = sum / n;
-  median = times[100];
+  median = (times[n / 2] + times[n / 2 + 1]) / 2;
   min = times[0];
   max = times[199];
 
@@ -584,8 +587,10 @@ void bneck(struct conn udp, struct conn tcp)
   send(tcp.socket, back, sizeof(back), 0);
   printf("send end, %d\n", i);
 
+  qsort(times, n, sizeof(uint64_t), comp);
+
   middle = sum / n;
-  median = times[100];
+  median = (times[n / 2] + times[n / 2 + 1]) / 2;
   min = times[0];
   max = times[199];
   
