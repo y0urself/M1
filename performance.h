@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 1500
 #define UDP_OVERHEAD 8
 #define TEST_RUNS 10000 /* Number of runs for each test */
 #define RTT_RUNS 200
@@ -17,6 +17,13 @@ struct conn
   socklen_t size;
 };
 
+uint64_t comp(const void *a,const void *b)
+{
+uint64_t *x = (uint64_t*)a;
+uint64_t *y = (uint64_t*)b;
+return (*x - *y);
+}
+
 void error(char *msg)
 {
   perror(msg);
@@ -25,7 +32,7 @@ void error(char *msg)
 
 int max(int x, int y) 
 { 
-  if (x > y)
+  if(x > y)
   {
     return x; 
   }
