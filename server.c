@@ -614,7 +614,7 @@ void bneck2(struct conn udp, int client)
     {
       //rx1 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
       rx1 = recvmsg(udp.socket, &msg, 0);
-      //printf("%d\n", rx1);
+      printf("%c, %d\n", buffer[0], rx1);
 
       struct cmsghdr *cmsg;
       for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
@@ -640,7 +640,7 @@ void bneck2(struct conn udp, int client)
       msg2.msg_flags = 0;
       //rx2 = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
       rx2 = recvmsg(udp.socket, &msg2, 0);
-      //printf("%d\n", rx2);
+      printf("%c, %d\n", buffer2[0], rx2);
 
       struct cmsghdr *cmsg2;
       for(cmsg2 = CMSG_FIRSTHDR(&msg2); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&msg2, cmsg2))
@@ -671,9 +671,12 @@ void bneck2(struct conn udp, int client)
     if(FD_ISSET(client, &rset))
     {
       printf("dropped\n");
-      recv(client, back, sizeof(back), 0);
-      printf("%s\n", back);
-      break;
+      int rx = recv(client, back, sizeof(back), 0);
+      printf("%s, %d\n", back, rx);
+      if((rx > 0) && (strcmp(back, "end.") == 0))
+      {
+        break;
+      }
     }
   }
 
