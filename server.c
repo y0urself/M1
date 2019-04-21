@@ -155,7 +155,7 @@ int main(int argc, char** argv)
   }
   else if(mode == 4)
   {
-    bneck(udp, tcp_client_fd);
+    bneck2(udp, tcp_client_fd);
   }
   close(udp_server_fd);
   close(tcp_server_fd);
@@ -670,8 +670,9 @@ void bneck2(struct conn udp, int client)
 
     if(FD_ISSET(client, &rset))
     {
-      //printf("dropped\n");
+      printf("dropped\n");
       recv(client, back, sizeof(back), 0);
+      printf("%s\n", back);
       break;
     }
   }
