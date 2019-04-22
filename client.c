@@ -13,9 +13,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifdef __linux__
-#include <linux/net_tstamp.h>
-#endif
 #include "performance.h"
 
 void rtt(struct conn udp);
@@ -161,18 +158,7 @@ int main(int argc, char** argv)
   tcp.addr.sin_port = htons(port);
 
   int timeopt = 1;
-#ifdef __linux__
-  int value = SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE
-          | SOF_TIMESTAMPING_SYS_HARDWARE | SOF_TIMESTAMPING_SOFTWARE;
-
-  if (setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMPING, &value, sizeof(value)) == -1) {
-      printf("SETSOCKOPT not working\n");
-  }
-
-  setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMPNS, (const void *)&timeopt , sizeof(timeopt));
-#else
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
-#endif
 
   printf("Connecting via TCP\n");
 
@@ -257,108 +243,54 @@ void rtt(struct conn udp)
   int len = strlen(message);
   int i = 0;
   int n = RTT_RUNS;
-
-#ifdef __linux__
-  uint64_t m = 1000000000;
-#else
   uint64_t m = 1000000;
-#endif
+
   int rx, tx;
 
   while(i < n)
   {
-    struct iovec io_vec[1] = {{buf, len}};
+    struct iovec io_vec[1] = {{message, len}};
 
     unsigned char cbuf[45] = {0};
     int clen = sizeof(cbuf);
 
     /* MSG HEADER */
-    struct msghdr recv1 = {};
-    memset(&recv1, 0, sizeof(recv1));
-    recv1.msg_name = &udp.addr;
-    recv1.msg_namelen = udp.size;
-    recv1.msg_iov = io_vec;
-    recv1.msg_iovlen = 1;
-    recv1.msg_control = NULL;
-    recv1.msg_controllen = 0;
-    recv1.msg_flags = 0;
+    struct msghdr msg = {};
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_name = &udp.addr;
+    msg.msg_namelen = udp.size;
+    msg.msg_iov = io_vec;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
 
-    
-
-#ifdef __linux__
-    struct timespec tvsend, tvrecv;
-    struct iovec io_send[1] = {{message, len}};
-
-    unsigned char cbuf[45] = {0};
-    int clen = sizeof(cbuf);
-
-    /* MSG HEADER */
-    struct msghdr send1 = {};
-    memset(&send1, 0, sizeof(send1));
-    send1.msg_name = &udp.addr;
-    send1.msg_namelen = udp.size;
-    send1.msg_iov = io_send;
-    send1.msg_iovlen = 1;
-    send1.msg_control = NULL;
-    send1.msg_controllen = 0;
-    send1.msg_flags = 0;
-    tx = sendmsg(udp.socket, &send1, 0);
-#else
     struct timeval tvsend, tvrecv;
     if (gettimeofday(&tvsend, NULL) < 0)
     {
       error("gettimeofday");
       exit(1);
     }
-    tx = sendmsg(udp.socket, &recv1, 0);
+    tx = sendmsg(udp.socket, &msg, 0);
     if (tx < 0) 
     {
       error("ERROR in sendmsg");
     }
-#endif
-    io_vec[0].iov_base = buf;
-    recv1.msg_control = cbuf;
-    recv1.msg_controllen = clen;
 
-    rx = recvmsg(udp.socket, &recv1, 0);
+    io_vec[0].iov_base = buf;
+    msg.msg_control = cbuf;
+    msg.msg_controllen = clen;
+
+    rx = recvmsg(udp.socket, &msg, 0);
     if (rx < 0)
     {
       error("ERROR in recvmsg");
     }
 
-#ifdef __linux__
-    struct cmsghdr *cmsg;
-    for(cmsg = CMSG_FIRSTHDR(&send1); cmsg != NULL; cmsg = CMSG_NXTHDR(&send1, cmsg))
-    {
-      if(cmsg->cmsg_level == SOL_SOCKET)
-      {
-        if(cmsg->cmsg_type == SO_TIMESTAMPNS || cmsg->cmsg_type == SO_TIMESTAMPING)
-        {
-          //printf("yo1");
-          memcpy(&tvsend, CMSG_DATA(cmsg), sizeof(tvsend));
-        }
-      }
-    }
-    struct cmsghdr *cmsg2;
-    for(cmsg2 = CMSG_FIRSTHDR(&recv1); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&recv1, cmsg2))
-    {
-      if(cmsg2->cmsg_level == SOL_SOCKET)
-      {
-        if(cmsg2->cmsg_type == SO_TIMESTAMPNS || cmsg2->cmsg_type == SO_TIMESTAMPING)
-        {
-          //printf("yo2");
-          memcpy(&tvrecv, CMSG_DATA(cmsg2), sizeof(tvrecv));
-        }
-      }
-    }
-
-    double diff = (tvrecv.tv_sec-tvsend.tv_sec)*1000000000.0f+tvsend.tv_nsec-t1.tv_nsec;
-    uint64_t rttime = (uint64_t)diff;
-#else  
     tvrecv.tv_sec = 0;
     tvrecv.tv_usec = 0;
     struct cmsghdr *cmsg;
-    for(cmsg = CMSG_FIRSTHDR(&recv1); cmsg != NULL; cmsg = CMSG_NXTHDR(&recv1, cmsg))
+    for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
     {
       if(cmsg->cmsg_level == SOL_SOCKET)
       {
@@ -369,12 +301,12 @@ void rtt(struct conn udp)
         }
       }
     }
+    //printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
+
     uint64_t stamp0, stamp1;
     stamp0 = tvsend.tv_sec * m + tvsend.tv_usec;
     stamp1 = tvrecv.tv_sec * m + tvrecv.tv_usec;
     uint64_t rttime = stamp1 - stamp0;
-    //printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
-#endif
     times[i] = rttime;
     sum = sum + rttime;
 
@@ -539,7 +471,7 @@ void bwidth(struct conn udp, struct conn tcp)
     //   FD_CLR(udp.socket, &rset);
     // }    
     i++;
-    //printf("%d\n", i);
+    printf("%d\n", i);
   }
   gettimeofday(&after, NULL);
 
