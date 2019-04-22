@@ -538,7 +538,7 @@ void bwidth(struct conn udp, struct conn tcp)
       if(FD_ISSET(udp.socket, &rset))
       {
         rx = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
-        if(rx < 0)
+        if (rx < 0)
         {
           error("ERROR in recvfrom");
         }
@@ -565,33 +565,24 @@ void bneck(struct conn udp, struct conn tcp)
   uint64_t min, max, middle, median;
   uint64_t m = 1000000;
   int i = 0;
-  int rxt = 0;
   int n = RTT_RUNS;
   int tx1, tx2;
-  char buffer[BUF_SIZE - 40];
-  char buffer2[BUF_SIZE - 40];
-  
+  char buffer[1400];
+  char buffer2[1400];
   char back[10];
-  memset(buffer, '1', BUF_SIZE - 40);
-  memset(buffer2, '2', BUF_SIZE - 40);
-  //strcpy(buffer, "Lo111111111Loremrem111111111Lorem111111111Lorem111111111Lorem111111111Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum. Lorem ipsum.\n");
-
-  printf("%d\n", BUF_SIZE);
+  memset(buffer, 'A', 1400);
+  memset(buffer2, 'b', 1400);
 
   while(i < n)
   {
     printf("sleep\n");
     sleep(1);
     tx1 = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
-    tx2 = sendto(udp.socket, buffer2, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
+    tx2 = sendto(udp.socket, buffer2, strlen(buffer2), 0, (struct sockaddr *)&udp.addr, udp.size);
 
     printf("sizes send: %d, %d\n", tx1, tx2);
 
-    rxt = recv(tcp.socket, back, sizeof(back), 0);
-    if(rxt < 0)
-    {
-      error("ERROR in recv");
-    }
+    recv(tcp.socket, back, sizeof(back), 0);
     memcpy((char*)&tmp, back, sizeof(uint64_t));
 
     times[i] = tmp;
@@ -599,8 +590,6 @@ void bneck(struct conn udp, struct conn tcp)
     i++;
   }
   printf("%d\n", i);
-
-  strcpy(back, "end.");
 
   send(tcp.socket, back, sizeof(back), 0);
   printf("send end, %d\n", i);

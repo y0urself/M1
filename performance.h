@@ -10,6 +10,8 @@
 #define TEST_RUNS 10000 /* Number of runs for each test */
 #define RTT_RUNS 200
 
+#define _GNU_SOURCE /* sendmmsg(), recvmmsg() */
+
 struct conn
 {
   int socket;
