@@ -14,10 +14,6 @@
 #include "performance.h"
 #include <sys/time.h>
 
-#ifdef __linux__
-#include "linux/errqueue.h"
-#include <linux/net_tstamp.h>
-#endif
 #include <inttypes.h>
 
 void rtt(struct conn udp, int client);
@@ -132,19 +128,7 @@ int main(int argc, char** argv)
   {
     mode = 4;
     int timeopt = 1;
-#ifdef __linux__
-    int value = SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE
-            | SOF_TIMESTAMPING_SYS_HARDWARE | SOF_TIMESTAMPING_SOFTWARE;
-
-    if (setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMPING, &value, sizeof(value)) == -1) {
-        printf("SETSOCKOPT not working\n");
-    }
-
-    setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMPNS, (const void *)&timeopt , sizeof(timeopt));
-#else
     setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
-
-#endif
   }
   
   if(bind(udp.socket, (struct sockaddr*)&udp.addr, udp.size) < 0)
@@ -223,48 +207,11 @@ void rtt(struct conn udp, int client)
 
       if(FD_ISSET(udp.socket, &rset))
       {
-#ifdef __linux__
-        struct iovec io_vec[1] = {{buf, len}};
-
-        unsigned char cbuf[45] = {0};
-        int clen = sizeof(cbuf);
-
-        /* MSG HEADER */
-        struct msghdr recv1 = {};
-        memset(&recv1, 0, sizeof(recv1));
-        recv1.msg_name = &udp.addr;
-        recv1.msg_namelen = udp.size;
-        recv1.msg_iov = io_vec;
-        recv1.msg_iovlen = 1;
-        recv1.msg_control = NULL;
-        recv1.msg_controllen = 0;
-        recv1.msg_flags = 0;
-
-        rx = recvmsg(udp.socket, &recv1, MSG_ERRQUEUE);
-        if (rx < 0)
-        {
-          error("ERROR in recvfrom");
-        }
-
-        struct cmsghdr *cmsg2;
-        for(cmsg2 = CMSG_FIRSTHDR(&recv1); cmsg2 != NULL; cmsg2 = CMSG_NXTHDR(&recv1, cmsg2))
-        {
-          if(cmsg2->cmsg_level == SOL_SOCKET)
-          {
-            if(cmsg2->cmsg_type == SO_TIMESTAMPNS || cmsg2->cmsg_type == SO_TIMESTAMPING)
-            {
-              printf("yo2");
-              memcpy(&tvrecv, CMSG_DATA(cmsg2), sizeof(tvrecv));
-            }
-          }
-        }
-#else
         rx = recvfrom(udp.socket, buffer, BUF_SIZE, 0, (struct sockaddr *)&udp.addr, &udp.size);
         if (rx < 0)
         {
           error("ERROR in recvfrom");
         }
-#endif
 
         tx = sendto(udp.socket, buffer, strlen(buffer), 0, (struct sockaddr *)&udp.addr, udp.size);
         if (tx < 0)
