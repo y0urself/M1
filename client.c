@@ -308,11 +308,11 @@ void rtt(struct conn udp)
       exit(1);
     }
     tx = sendmsg(udp.socket, &recv1, 0);
+#endif
     if (tx < 0) 
     {
       error("ERROR in sendmsg");
     }
-#endif
     io_vec[0].iov_base = buf;
     recv1.msg_control = cbuf;
     recv1.msg_controllen = clen;
@@ -331,7 +331,7 @@ void rtt(struct conn udp)
       {
         if(cmsg->cmsg_type == SO_TIMESTAMPNS || cmsg->cmsg_type == SO_TIMESTAMPING)
         {
-          //printf("yo1");
+          printf("yo1");
           memcpy(&tvsend, CMSG_DATA(cmsg), sizeof(tvsend));
         }
       }
@@ -343,7 +343,7 @@ void rtt(struct conn udp)
       {
         if(cmsg2->cmsg_type == SO_TIMESTAMPNS || cmsg2->cmsg_type == SO_TIMESTAMPING)
         {
-          //printf("yo2");
+          printf("yo2");
           memcpy(&tvrecv, CMSG_DATA(cmsg2), sizeof(tvrecv));
         }
       }
