@@ -162,7 +162,7 @@ int main(int argc, char** argv)
 
   int timeopt = 1;
 #ifdef __linux__
-  int value = SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE
+  int value = SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_TX_SOFTWARE | SOF_TIMESTAMPING_RAW_HARDWARE
           | SOF_TIMESTAMPING_SYS_HARDWARE | SOF_TIMESTAMPING_SOFTWARE;
 
   if (setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMPING, &value, sizeof(value)) == -1) {
@@ -283,8 +283,6 @@ void rtt(struct conn udp)
     recv1.msg_controllen = 0;
     recv1.msg_flags = 0;
 
-    
-
 #ifdef __linux__
     struct timespec tvsend, tvrecv;
     struct iovec io_send[1] = {{message, len}};
@@ -313,9 +311,9 @@ void rtt(struct conn udp)
     {
       error("ERROR in sendmsg");
     }
-    io_vec[0].iov_base = buf;
-    recv1.msg_control = cbuf;
-    recv1.msg_controllen = clen;
+    //io_vec[0].iov_base = buf;
+    //recv1.msg_control = cbuf;
+    //recv1.msg_controllen = clen;
 
     rx = recvmsg(udp.socket, &recv1, 0);
     if (rx < 0)
