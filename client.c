@@ -471,7 +471,7 @@ void bwidth(struct conn udp, struct conn tcp)
     //   FD_CLR(udp.socket, &rset);
     // }    
     i++;
-    //printf("%d\n", i);
+    printf("%d\n", i);
   }
   gettimeofday(&after, NULL);
 
