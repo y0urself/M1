@@ -289,6 +289,9 @@ void rtt(struct conn udp)
     struct timespec tvsend, tvrecv;
     struct iovec io_send[1] = {{message, len}};
 
+    unsigned char cbuf[45] = {0};
+    int clen = sizeof(cbuf);
+
     /* MSG HEADER */
     struct msghdr send1 = {};
     memset(&send1, 0, sizeof(send1));
@@ -349,7 +352,7 @@ void rtt(struct conn udp)
       }
     }
 
-    double diff = (tvrecv.tv_sec-tvsend.tv_sec)*1000000000.0f+tvrecv.tv_nsec-tvsend.tv_nsec;
+    double diff = (tvrecv.tv_sec-tvsend.tv_sec)*1000000000.0f+tvsend.tv_nsec-t1.tv_nsec;
     uint64_t rttime = (uint64_t)diff;
 #else  
     tvrecv.tv_sec = 0;
