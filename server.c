@@ -224,10 +224,6 @@ void rtt(struct conn udp, int client)
       if(FD_ISSET(udp.socket, &rset))
       {
 #ifdef __linux__
-        struct timespec tvsend;
-        char buf[] = "Ja ich weiß, es tut mir wirklich schrecklich leid!";
-        int len = strlen(message);
-
         struct iovec io_vec[1] = {{buf, len}};
 
         unsigned char cbuf[45] = {0};
@@ -258,7 +254,7 @@ void rtt(struct conn udp, int client)
             if(cmsg2->cmsg_type == SO_TIMESTAMPNS || cmsg2->cmsg_type == SO_TIMESTAMPING)
             {
               printf("yo2");
-              memcpy(&tvsend, CMSG_DATA(cmsg2), sizeof(tvsend));
+              memcpy(&tvrecv, CMSG_DATA(cmsg2), sizeof(tvrecv));
             }
           }
         }
