@@ -164,6 +164,7 @@ void rtt(struct conn udp, int client)
 {
   int i = 0;
   char buffer[BUF_SIZE];
+  char back[BUF_SIZE];
   struct timeval t_val;
   t_val.tv_sec = 0;
   t_val.tv_usec = 0;
@@ -190,19 +191,18 @@ void rtt(struct conn udp, int client)
     }
     else
     {
-      if(FD_ISSET(client, &rset))
-      {
+        if(FD_ISSET(client, &rset))
+        {
         printf("hello %d\n", i);
 
-        recv(client, buffer, sizeof(buffer), 0);
+        recv(client, back, sizeof(back), 0);
 
-        memcpy(buffer, "meeh\n", 6);
+        printf("%s\n", back);
 
-        printf("TCP closing\n");
-
-        send(client, buffer, sizeof(buffer), 0);
-
-        break;
+        if(strcmp(back, "back") == 0)
+        {
+          break;
+        }
       }
 
       if(FD_ISSET(udp.socket, &rset))
