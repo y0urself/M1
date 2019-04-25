@@ -9,6 +9,8 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
+#include <errno.h>
+
 #include <inttypes.h>
 #include <unistd.h>
 #include <time.h>
@@ -160,6 +162,14 @@ int main(int argc, char** argv)
   int timeopt = 1;
   setsockopt(udp.socket, SOL_SOCKET, SO_TIMESTAMP, (const void *)&timeopt , sizeof(timeopt));
 
+  if(mode == 1)
+  {
+    struct timeval tout;
+    tout.tv_sec = 8;
+    tout.tv_usec = 0;
+    setsockopt(udp.socket, SOL_SOCKET, SO_RCVTIMEO, (const void *)&tout , sizeof(tout));
+  }
+
   printf("Connecting via TCP\n");
 
   if(connect(tcp.socket, (struct sockaddr*)&tcp.addr, tcp.size) < 0)
@@ -182,6 +192,8 @@ int main(int argc, char** argv)
   {
     printf("Calculating Round-Trip-Time:\n");
     rtt(udp);
+    
+    strcpy(buffer, "back");
   }
   else if(mode == 2)
   {
@@ -199,7 +211,8 @@ int main(int argc, char** argv)
     bneck(udp, tcp);
   }
   
-  //printf("TCP me again\n");
+  printf("TCP me again\n");
+  
 
   send(tcp.socket, buffer, sizeof(buffer), 0);
 
@@ -238,17 +251,23 @@ void rtt(struct conn udp)
 
   // memset(&cmsg_union, 0, sizeof(cmsg_union));
 
-  char message[] = "Der Satz hatte zu viele Silben, entschuldige dich!";
-  char buf[] = "Ja ich weiß, es tut mir wirklich schrecklich leid!";
+  //char message[] = "Der Satz hatte zu viele Silben, entschuldige dich!";
+  //char buf[] = "Ja ich weiß, es tut mir wirklich schrecklich leid!";
+  char message[1450];
+  char buf[1450];
+  memset(message, 'A', sizeof(message));
+  memset(buf, 'B', sizeof(buf));
   int len = strlen(message);
   int i = 0;
   int n = RTT_RUNS;
+  int loss = 0;
   uint64_t m = 1000000;
 
   int rx, tx;
 
   while(i < n)
   {
+    usleep(500000);
     struct iovec io_vec[1] = {{message, len}};
 
     unsigned char cbuf[45] = {0};
@@ -282,39 +301,51 @@ void rtt(struct conn udp)
     msg.msg_controllen = clen;
 
     rx = recvmsg(udp.socket, &msg, 0);
-    if (rx < 0)
+    if(rx < 0)
     {
-      error("ERROR in recvmsg");
-    }
-
-    tvrecv.tv_sec = 0;
-    tvrecv.tv_usec = 0;
-    struct cmsghdr *cmsg;
-    for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
-    {
-      if(cmsg->cmsg_level == SOL_SOCKET)
+      int errcv = errno;
+      printf("errno %d\n" , errcv);
+      if(errcv == EAGAIN || errcv == EWOULDBLOCK || errcv == EINPROGRESS)
       {
-        //printf("%d\n", cmsg->cmsg_type);
-        if(cmsg->cmsg_type == SO_TIMESTAMP)
-        {
-          memcpy(&tvrecv, CMSG_DATA(cmsg), sizeof(tvrecv));
-        }
+        printf("Timeout\n");
+        loss++;
+      }
+      else
+      {
+        error("ERROR in recvmsg");
       }
     }
-    //printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
+    else if(rx > 0)
+    {
+      tvrecv.tv_sec = 0;
+      tvrecv.tv_usec = 0;
+      struct cmsghdr *cmsg;
+      for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg))
+      {
+        if(cmsg->cmsg_level == SOL_SOCKET)
+        {
+          //printf("%d\n", cmsg->cmsg_type);
+          if(cmsg->cmsg_type == SO_TIMESTAMP)
+          {
+            memcpy(&tvrecv, CMSG_DATA(cmsg), sizeof(tvrecv));
+          }
+        }
+      }
+      //printf("SO_TIMESTAMP %ld.%06ld \n", (long)tvrecv.tv_sec, (long)tvrecv.tv_usec);
 
-    uint64_t stamp0, stamp1;
-    stamp0 = tvsend.tv_sec * m + tvsend.tv_usec;
-    stamp1 = tvrecv.tv_sec * m + tvrecv.tv_usec;
-    uint64_t rttime = stamp1 - stamp0;
-    times[i] = rttime;
-    sum = sum + rttime;
+      uint64_t stamp0, stamp1;
+      stamp0 = tvsend.tv_sec * m + tvsend.tv_usec;
+      stamp1 = tvrecv.tv_sec * m + tvrecv.tv_usec;
+      uint64_t rttime = stamp1 - stamp0;
+      times[i] = rttime;
+      sum = sum + rttime;
 
-    printf("%d bytes sent, %d bytes received\n", tx, rx);
-    printf("round-trip time was %"PRIu64" microseconds\n", rttime);
+      printf("%d bytes sent, %d bytes received\n", tx, rx);
+      printf("round-trip time was %"PRIu64" microseconds\n", rttime);
 
-    i++;
-    printf("%d\n", i);
+      i++;
+      //printf("%d\n", i);
+    }
   }
   
   qsort(times, n, sizeof(uint64_t), comp);
@@ -330,6 +361,18 @@ void rtt(struct conn udp)
   printf("maximum:    %"PRIu64"\n", max);
   printf("average:    %"PRIu64"\n", middle);
   printf("median:     %"PRIu64"\n", median);
+  printf("packets lost: %d\n", loss);
+
+    printf("List: [");
+  for(int j = 0; j < n; j++)
+  {
+    printf("%"PRIu64" µs", times[j]);
+    if(j != (n - 1))
+    {
+      printf(", ");
+    }
+  }
+  printf("]\n");
 }
 
 void ploss(struct conn udp, struct conn tcp)
