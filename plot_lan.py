@@ -29,7 +29,8 @@ def parse(file):
         if len(l) > 0:
           time = []
           print(str(len(l))) 
-          name = l[0] + " " + l[1]
+          #name = l[0] + " " + l[1]
+          name = l[1]
           for n in l:
             if isint(n):
               time.append(int(n))
@@ -173,7 +174,7 @@ elif sys.argv[1] == "boxes":
 
     # Hide these grid behind plot objects
     ax1.set_axisbelow(True)
-    ax1.set_title('Round-Trip-Time of a 1450bytes UDP packet in different scenarios')
+    ax1.set_title('Round-Trip-Time in a LAN of a 1450 bytes UDP packet with a throttle to 12.500 kbit/s')
     #ax1.set_xlabel('Instanz I')
     ax1.set_ylabel('Time in µs')
 
@@ -192,7 +193,11 @@ elif sys.argv[1] == "boxes":
             boxY.append(box.get_ydata()[j])
         boxCoords = list(zip(boxX, boxY))
         # Alternate between Dark Khaki and Royal Blue
-        k = i % 3
+        k = 0
+        if i >= 3 and i < 6:
+            k = 1
+        elif i >= 6:
+            k = 2;
         boxPolygon = Polygon(boxCoords, facecolor=boxColors[k])
         ax1.add_patch(boxPolygon)
         # Now draw the median lines back over what we just filled in
@@ -246,5 +251,5 @@ elif sys.argv[1] == "boxes":
     #plt.legend(loc=9, fontsize=20)
 
     plt.savefig(sys.argv[3])
-    
+
     plt.show()
